@@ -1,0 +1,28 @@
+{
+  "name": "portafolio-api",
+  "version": "1.0.0",
+  "description": "mi primera api con node.js",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon ./server.js"
+  },
+  "keywords": [
+    "node",
+    "js"
+  ],
+  "author": "Sergio",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "formidable": "^3.5.1",
+    "mysql": "^2.18.1",
+    "pdf-table": "^1.0.2",
+    "pdfkit": "^0.15.0",
+    "pdfmake": "^0.2.10"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
