@@ -1,6 +1,6 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import mysql from 'mysql';
+import mysql from 'mysql2';
 import cors from 'cors';
 import pdfMake from 'pdfmake/build/pdfmake.js';
 import pdfFonts from 'pdfmake/build/vfs_fonts.js';
@@ -36,14 +36,15 @@ app.post('/registro', (req, res) => {
   const data = req.body;
   connection.query('INSERT INTO CLIENTE SET ?', data, (error, results) => {
     if (error) {
-      console.error('Error al insertar en la base de datos:', error);
-      res.status(500).json({ message: 'Error al registrar' });
+      console.error('Error al insertar en la base de datos:', error.sqlMessage);
+      res.status(500).json({ message: 'Error al registrar', error: error.sqlMessage });
     } else {
       console.log('Registro exitoso');
       res.json({ message: 'Registro exitoso' });
     }
   });
 });
+
 
 // Ruta para inicio de sesión de clientes
 app.post('/login-cliente', (req, res) => {
@@ -76,6 +77,19 @@ app.post('/api/reset-password', (req, res) => {
   });
 });
 
+// Ruta para enviar contacto cliente
+app.post('/contacto', (req, res) => {
+  const data = req.body;
+  connection.query('INSERT INTO CONTACTO SET ?', data, (error, results) => {
+    if (error) {
+      console.error('Error al insertar en la base de datos:', error);
+      res.status(500).json({ message: 'Error al enviar el contacto' });
+    } else {
+      console.log('Contacto enviado exitosamente');
+      res.json({ message: 'Contacto enviado exitosamente' });
+    }
+  });
+});
 
 // Ruta para inicio de sesión de usuarios
 app.post('/login-usuario', (req, res) => {
@@ -490,6 +504,152 @@ app.post('/generate-pdf', (req, res) => {
   });
 });
 
+
+
+
+
+
+
+// Ruta para obtener regiones
+app.get('/regiones', (req, res) => {
+  connection.query('SELECT * FROM REGION', (error, results) => {
+    if (error) {
+      console.error('Error al obtener regiones:', error);
+      res.status(500).json({ message: 'Error al obtener regiones' });
+    } else {
+      res.json(results);
+    }
+  });
+});
+
+// Ruta para obtener sucursales por región
+app.get('/sucursales/:regionId', (req, res) => {
+  const { regionId } = req.params;
+  console.log(`Recibida solicitud para obtener sucursales de la región con ID: ${regionId}`);
+
+  const query = 'SELECT * FROM SUCURSAL WHERE SUC_REGION = ?';
+  connection.query(query, [regionId], (error, results) => {
+    if (error) {
+      console.error('Error al obtener sucursales:', error);
+      res.status(500).json({ message: 'Error al obtener sucursales' });
+    } else {
+      console.log(`Sucursales obtenidas: ${JSON.stringify(results)}`);
+      res.json(results);
+    }
+  });
+});
+
+app.get('/available-times', (req, res) => {
+  const { date } = req.query;
+  console.log(`Fecha recibida para obtener horarios: ${date}`);
+  const query = `
+    SELECT h.ID_HORARIO, h.FECHA, ho.HORA, h.BOOKED 
+    FROM HORARIOS h 
+    JOIN HORA ho ON h.DISPONIBLE_HORA = ho.ID_HORA 
+    WHERE h.FECHA = ?
+  `;
+  connection.query(query, [date], (error, results) => {
+    if (error) {
+      console.error('Error al obtener horarios:', error);
+      res.status(500).json({ message: 'Error al obtener horarios' });
+    } else {
+      console.log('Horarios obtenidos:', results);
+      res.json(results);
+    }
+  });
+});
+
+
+
+
+
+
+// Ruta para agregar horarios disponibles
+app.post('/add-horarios', (req, res) => {
+  const { date } = req.body;
+
+  // Definir las horas disponibles como enteros que corresponden a los IDs en la tabla HORA
+  const horasDisponibles = [
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+  ];
+
+  const values = horasDisponibles.map(horaId => [date, horaId, false]);
+
+  const query = 'INSERT INTO HORARIOS (FECHA, DISPONIBLE_HORA, BOOKED) VALUES ?';
+  connection.query(query, [values], (error, results) => {
+    if (error) {
+      console.error('Error al agregar horarios:', error);
+      res.status(500).json({ message: 'Error al agregar horarios' });
+    } else {
+      res.json({ message: 'Horarios agregados correctamente' });
+    }
+  });
+});
+
+
+
+// Ruta para reservar
+app.post('/reservar', (req, res) => {
+  const { FECHA, SUCURSAL, HORA, VEH_PATENTE, VEH_MARCA, VEH_MODELO, VEH_ANIO } = req.body;
+  const query = 'INSERT INTO RESERVAS (RE_FECHA, RE_SUCURSAL, RE_HORA, RE_PATENTE, RE_MARCA, RE_MODELO, RE_ANIO) VALUES (?, ?, ?, ?, ?, ?, ?)';
+  connection.query(query, [FECHA, SUCURSAL, HORA, VEH_PATENTE, VEH_MARCA, VEH_MODELO, VEH_ANIO], (error, results) => {
+    if (error) {
+      console.error('Error al insertar en la base de datos:', error);
+      res.status(500).json({ message: 'Error al reservar' });
+    } else {
+      res.json({ message: 'Reserva exitosa' });
+    }
+  });
+});
+
+
+
+
+
+// Rutas adicionales para cargar datos de vehículo
+app.get('/patentes', (req, res) => {
+  connection.query('SELECT * FROM VEHICULO', (error, results) => {
+    if (error) {
+      console.error('Error al obtener datos de la base de datos:', error);
+      res.status(500).json({ message: 'Error al obtener datos' });
+    } else {
+      res.json(results);
+    }
+  });
+});
+
+app.get('/marcas', (req, res) => {
+  connection.query('SELECT * FROM MARCA', (error, results) => {
+    if (error) {
+      console.error('Error al obtener datos de la base de datos:', error);
+      res.status(500).json({ message: 'Error al obtener datos' });
+    } else {
+      res.json(results);
+    }
+  });
+});
+
+app.get('/modelos', (req, res) => {
+  connection.query('SELECT * FROM MODELO', (error, results) => {
+    if (error) {
+      console.error('Error al obtener datos de la base de datos:', error);
+      res.status(500).json({ message: 'Error al obtener datos' });
+    } else {
+      res.json(results);
+    }
+  });
+});
+
+app.get('/anios', (req, res) => {
+  connection.query('SELECT * FROM ANIO', (error, results) => {
+    if (error) {
+      console.error('Error al obtener datos de la base de datos:', error);
+      res.status(500).json({ message: 'Error al obtener datos' });
+    } else {
+      res.json(results);
+    }
+  });
+});
 
 // Iniciar servidor
 const PORT = process.env.PORT || 4000;
