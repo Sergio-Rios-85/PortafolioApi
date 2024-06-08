@@ -603,9 +603,6 @@ app.post('/reservar', (req, res) => {
 });
 
 
-
-
-
 // Rutas adicionales para cargar datos de vehículo
 app.get('/patentes', (req, res) => {
   connection.query('SELECT * FROM VEHICULO', (error, results) => {
