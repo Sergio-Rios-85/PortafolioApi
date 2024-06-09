@@ -590,9 +590,9 @@ app.post('/add-horarios', (req, res) => {
 
 // Ruta para reservar
 app.post('/reservar', (req, res) => {
-  const { FECHA, SUCURSAL, HORA, VEH_PATENTE, VEH_MARCA, VEH_MODELO, VEH_ANIO } = req.body;
+  const { FECHA, SUCURSAL, HORA, RE_PATENTE, RE_MARCA, RE_MODELO, RE_ANIO } = req.body;
   const query = 'INSERT INTO RESERVAS (RE_FECHA, RE_SUCURSAL, RE_HORA, RE_PATENTE, RE_MARCA, RE_MODELO, RE_ANIO) VALUES (?, ?, ?, ?, ?, ?, ?)';
-  connection.query(query, [FECHA, SUCURSAL, HORA, VEH_PATENTE, VEH_MARCA, VEH_MODELO, VEH_ANIO], (error, results) => {
+  connection.query(query, [FECHA, SUCURSAL, HORA, RE_PATENTE, RE_MARCA, RE_MODELO, RE_ANIO], (error, results) => {
     if (error) {
       console.error('Error al insertar en la base de datos:', error);
       res.status(500).json({ message: 'Error al reservar' });
@@ -603,17 +603,30 @@ app.post('/reservar', (req, res) => {
 });
 
 
+
 // Rutas adicionales para cargar datos de vehículo
-app.get('/patentes', (req, res) => {
-  connection.query('SELECT * FROM VEHICULO', (error, results) => {
+app.get('/vehiculo/:patente', (req, res) => {
+  const { patente } = req.params;
+  const query = `
+    SELECT 
+      V.PATENTE, M.MARCA, MO.MODELO, A.ANIO
+    FROM VEHICULO V
+    JOIN MARCA M ON V.VEH_MARCA = M.ID_MARCA
+    JOIN MODELO MO ON V.VEH_MODELO = MO.ID_MODELO
+    JOIN ANIO A ON V.VEH_ANIO = A.ID_ANIO
+    WHERE V.PATENTE = ?
+  `;
+  connection.query(query, [patente], (error, results) => {
     if (error) {
-      console.error('Error al obtener datos de la base de datos:', error);
-      res.status(500).json({ message: 'Error al obtener datos' });
+      console.error('Error al obtener datos del vehículo:', error);
+      res.status(500).json({ message: 'Error al obtener datos del vehículo' });
     } else {
-      res.json(results);
+      res.json(results[0]);
     }
   });
 });
+
+
 
 app.get('/marcas', (req, res) => {
   connection.query('SELECT * FROM MARCA', (error, results) => {
