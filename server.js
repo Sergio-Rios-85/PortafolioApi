@@ -9,7 +9,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import formidable from 'formidable';
+import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
 
+dotenv.config();
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 const __filename = fileURLToPath(import.meta.url);
@@ -77,19 +80,53 @@ app.post('/api/reset-password', (req, res) => {
   });
 });
 
-// Ruta para enviar contacto cliente
+
+
+
+
+const transporter = nodemailer.createTransport({
+  service: 'Outlook365',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
 app.post('/contacto', (req, res) => {
   const data = req.body;
+
   connection.query('INSERT INTO CONTACTO SET ?', data, (error, results) => {
     if (error) {
       console.error('Error al insertar en la base de datos:', error);
       res.status(500).json({ message: 'Error al enviar el contacto' });
     } else {
       console.log('Contacto enviado exitosamente');
-      res.json({ message: 'Contacto enviado exitosamente' });
+
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: 'certitech02@gmail.com',
+        subject: 'Nuevo contacto recibido',
+        text: `Nombre: ${data.nombre}\nCorreo: ${data.correo}\nMensaje: ${data.mensaje}`
+      };
+
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error('Error al enviar el correo:', error);
+          res.status(500).json({ message: 'Error al enviar el contacto' });
+        } else {
+          console.log('Correo enviado:', info.response);
+          res.json({ message: 'Contacto enviado exitosamente' });
+        }
+      });
     }
   });
 });
+
+
+
+
+
+
 
 // Ruta para inicio de sesión de usuarios
 app.post('/login-usuario', (req, res) => {
