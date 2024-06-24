@@ -11,6 +11,7 @@ import { dirname } from 'path';
 import formidable from 'formidable';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import validator from 'validator'; 
 
 dotenv.config();
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
@@ -37,6 +38,11 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Ruta para registro de clientes
 app.post('/registro', (req, res) => {
   const data = req.body;
+
+  if (!validator.isEmail(data.CORREO_CLIENTE)) {
+    return res.status(400).json({ message: 'Correo electrónico no válido' });
+  }
+
   connection.query('INSERT INTO CLIENTE SET ?', data, (error, results) => {
     if (error) {
       console.error('Error al insertar en la base de datos:', error.sqlMessage);
@@ -81,9 +87,6 @@ app.post('/api/reset-password', (req, res) => {
 });
 
 
-
-
-
 const transporter = nodemailer.createTransport({
   service: 'Outlook365',
   auth: {
@@ -92,8 +95,14 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+
 app.post('/contacto', (req, res) => {
   const data = req.body;
+
+  // Validar el correo electrónico en el servidor
+  if (!validator.isEmail(data.correo)) {
+    return res.status(400).json({ message: 'Correo electrónico no válido' });
+  }
 
   connection.query('INSERT INTO CONTACTO SET ?', data, (error, results) => {
     if (error) {
@@ -122,12 +131,6 @@ app.post('/contacto', (req, res) => {
   });
 });
 
-
-
-
-
-
-
 // Ruta para inicio de sesión de usuarios
 app.post('/login-usuario', (req, res) => {
   const { usuario, contrasena } = req.body;
@@ -149,6 +152,7 @@ app.post('/login-usuario', (req, res) => {
 
 
 // Ruta para registro de vehículos
+// Endpoint para insertar un vehículo
 app.post('/vehiculo', (req, res) => {
   const vehiculo = req.body;
   connection.query('INSERT INTO VEHICULO SET ?', vehiculo, (error, result) => {
@@ -162,11 +166,10 @@ app.post('/vehiculo', (req, res) => {
         if (error) {
           console.error('Error al obtener datos del vehículo:', error);
           res.status(500).json({ message: 'Error al obtener datos del vehículo' });
-        } else { 
-          console.log(results)
+        } else {
           if (results.length > 0) {
             const nuevoVehiculo = results[0];
-            res.json({ message: 'Registro exitoso', vehiculo: nuevoVehiculo }); // Devolvemos los datos del vehículo insertado y mensaje de éxito
+            res.json({ message: 'Registro exitoso', vehiculo: nuevoVehiculo });
           } else {
             res.status(404).json({ message: 'Vehículo no encontrado después de insertar' });
           }
@@ -176,6 +179,7 @@ app.post('/vehiculo', (req, res) => {
   });
 });
 
+// Endpoint para obtener todas las marcas
 app.get('/marcas', (req, res) => {
   connection.query('SELECT * FROM MARCA', (error, results) => {
     if (error) {
@@ -186,16 +190,32 @@ app.get('/marcas', (req, res) => {
     }
   });
 });
+
+// Endpoint para obtener los modelos filtrados por marca
 app.get('/modelos', (req, res) => {
-  connection.query('SELECT * FROM MODELO', (error, results) => {
-    if (error) {
-      console.error('Error al obtener datos de la base de datos:', error);
-      res.status(500).json({ message: 'Error al obtener datos' });
-    } else {
-      res.json(results);
-    }
-  });
+  const idMarca = req.query.idMarca;
+  if (idMarca) {
+    connection.query('SELECT * FROM MODELO WHERE ID_MARCA = ?', [idMarca], (error, results) => {
+      if (error) {
+        console.error('Error al obtener datos de la base de datos:', error);
+        res.status(500).json({ message: 'Error al obtener datos' });
+      } else {
+        res.json(results);
+      }
+    });
+  } else {
+    connection.query('SELECT * FROM MODELO', (error, results) => {
+      if (error) {
+        console.error('Error al obtener datos de la base de datos:', error);
+        res.status(500).json({ message: 'Error al obtener datos' });
+      } else {
+        res.json(results);
+      }
+    });
+  }
 });
+
+// Endpoint para obtener todos los colores
 app.get('/colores', (req, res) => {
   connection.query('SELECT * FROM COLOR', (error, results) => {
     if (error) {
@@ -206,6 +226,8 @@ app.get('/colores', (req, res) => {
     }
   });
 });
+
+// Endpoint para obtener todos los años
 app.get('/anios', (req, res) => {
   connection.query('SELECT * FROM ANIO', (error, results) => {
     if (error) {
@@ -421,7 +443,7 @@ app.post('/generate-pdf', (req, res) => {
     console.log('Archivos recibidos:', files);
 
     // Extraer y analizar los datos de inspección correctamente
-    const inspeccion = JSON.parse(fields.inspeccion[0]);  // Acceder al primer elemento del array
+    const inspeccion = JSON.parse(fields.inspeccion[0]); 
     const fechaFormateada = inspeccion.FECHA.split('T')[0];
     const horaFormateada = inspeccion.HORA.replace(/:/g, '-');
     const filename = `Inspeccion_${fechaFormateada}_${horaFormateada}.pdf`;
@@ -540,8 +562,6 @@ app.post('/generate-pdf', (req, res) => {
     });
   });
 });
-
-
 
 
 
