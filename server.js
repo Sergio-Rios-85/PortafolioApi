@@ -42,7 +42,6 @@ app.post('/registro', (req, res) => {
   if (!validator.isEmail(data.CORREO_CLIENTE)) {
     return res.status(400).json({ message: 'Correo electrónico no válido' });
   }
-
   connection.query('INSERT INTO CLIENTE SET ?', data, (error, results) => {
     if (error) {
       console.error('Error al insertar en la base de datos:', error.sqlMessage);
@@ -241,37 +240,23 @@ app.get('/anios', (req, res) => {
 
 
 app.post('/buscar-vehiculos', (req, res) => {
-  const { PATENTE, MOTOR, CHASIS } = req.body;
+  const { PATENTE } = req.body;
   let query = `
-    SELECT V.PATENTE, V.MOTOR, 
-           V.CHASIS, V.KILOMETRAJE, 
-           M.MARCA AS VEH_MARCA, 
-           MO.MODELO AS VEH_MODELO, 
-           C.COLOR AS VEH_COLOR, 
-           A.ANIO AS VEH_ANIO
+    SELECT 
+      V.PATENTE, V.MOTOR, V.CHASIS, V.KILOMETRAJE, 
+      M.MARCA AS VEH_MARCA, MO.MODELO AS VEH_MODELO, 
+      C.COLOR AS VEH_COLOR, A.ANIO AS VEH_ANIO,
+      RI.RESULTADO_INSPECCION
     FROM VEHICULO V
     JOIN MARCA M ON V.VEH_MARCA = M.ID_MARCA
     JOIN MODELO MO ON V.VEH_MODELO = MO.ID_MODELO
     JOIN COLOR C ON V.VEH_COLOR = C.ID_COLOR
     JOIN ANIO A ON V.VEH_ANIO = A.ID_ANIO
-    WHERE 1=1
+    LEFT JOIN INSPECCION I ON V.ID_VEHICULO = I.INSP_PATENTE
+    LEFT JOIN RESULTADO_INSPECCION RI ON I.INSP_RESULTADO_INSPECCION = RI.ID_RESULTADO_INSPECCION
+    WHERE V.PATENTE = ?
   `;
-  const params = [];
-
-  if (PATENTE) {
-    query += ' AND V.PATENTE = ?';
-    params.push(PATENTE);
-  }
-  if (MOTOR) {
-    query += ' AND V.MOTOR = ?';
-    params.push(MOTOR);
-  }
-  if (CHASIS) {
-    query += ' AND V.CHASIS = ?';
-    params.push(CHASIS);
-  }
-
-  connection.query(query, params, (error, results) => {
+  connection.query(query, [PATENTE], (error, results) => {
     if (error) {
       console.error('Error al buscar vehículos:', error);
       res.status(500).json({ message: 'Error al buscar vehículos' });
@@ -280,6 +265,8 @@ app.post('/buscar-vehiculos', (req, res) => {
     }
   });
 });
+
+
 
 
 app.post('/oi', (req, res) => {
